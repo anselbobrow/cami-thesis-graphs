@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+
+<body>
+  <div id="plot"></div>
+</body>
+<script type="module">
+  import * as Plot from "@observablehq/plot";
+  import * as d3 from "d3";
+  import { regressionLinear } from "d3-regression";
+  import data_url from "url:./prepareddata.csv";
+
+  function load(data) {
+    d3.csv(data, d3.autoType).then(data => {
+      plot(data);
+    });
+  }
+
+  function plot(data) {
+    // process data
+    const cat_scores = data.flatMap(d =>
+      [
+        { x: d["CATQ_Compensation"], y: d["NR6_Score"], label: "Compensation" },
+        { x: d["CATQ_Masking"], y: d["NR6_Score"], label: "Masking" },
+        { x: d["CATQ_Assimilation"], y: d["NR6_Score"], label: "Assimilation" },
+      ]
+    );
+
+    // calculate linear regression
+    const regression = regressionLinear().x(d => d.x).y(d => d.y);
+    const compRegression = regression(cat_scores.filter(d => d.label === "Compensation"));
+    const maskRegression = regression(cat_scores.filter(d => d.label === "Masking"));
+    const assimRegression = regression(cat_scores.filter(d => d.label === "Assimilation"));
+    console.log(compRegression.rSquared, maskRegression.rSquared, assimRegression.rSquared);
+
+    // plot data
+    const plot = Plot.plot({
+      width: 800,
+      height: 600,
+      grid: true,
+      color: { legend: true },
+      // symbol: { legend: true },
+      marks: [
+        Plot.dot(cat_scores, { x: "x", y: "y", fill: "label", symbol: "label" }),
+        Plot.linearRegressionY(cat_scores, { x: "x", y: "y", stroke: "label" }),
+      ]
+    });
+
+    document.querySelector("#plot").append(plot);
+  }
+
+  load(data_url);
+</script>
